@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ascon/api.h"
+#include "ascon/ascon.h"
 #include "string.h"
 #include "checksum.h"
 #include "mavlink_types.h"
@@ -296,78 +298,154 @@ static inline void _mav_parse_error(mavlink_status_t *status)
  * @param length Message length
  */
 MAVLINK_HELPER uint16_t mavlink_finalize_message_buffer_target(mavlink_message_t* msg, uint32_t system_id, uint8_t component_id,
-						      mavlink_status_t* status, uint8_t min_length, uint8_t length, uint8_t crc_extra,
-						      uint32_t target_sysid)
+						      mavlink_status_t* status, uint8_t min_length, uint8_t length, uint8_t crc_extra, uint8_t target_system, uint8_t target_component)
+						      //uint32_t target_sysid)
 {
-	bool mavlink1 = (status->flags & MAVLINK_STATUS_FLAG_OUT_MAVLINK1) != 0;
-#ifndef MAVLINK_NO_SIGN_PACKET
-	bool signing = 	(!mavlink1) && status->signing && (status->signing->flags & MAVLINK_SIGNING_FLAG_SIGN_OUTGOING);
-#else
-	bool signing = false;
-#endif
-	uint8_t signature_len = signing? MAVLINK_SIGNATURE_BLOCK_LEN : 0;
-	uint8_t buf[MAVLINK_MAX_HEADER_LEN];
-	if (mavlink1) {
-		if (system_id > 255 || target_sysid > 255 || msg->msgid > 255) {
-			// 32 bit IDs and extended message IDs cannot be represented in MAVLink1. Never
-			// truncate: a masked sysid would alias another system
-			// and a zeroed target would become a broadcast
-			_mav_parse_error(status);
-			return 0;
-		}
-		msg->magic = MAVLINK_STX_MAVLINK1;
-	} else {
-		msg->magic = MAVLINK_STX;
-	}
-	msg->len = mavlink1?min_length:_mav_trim_payload(_MAV_PAYLOAD(msg), length);
-	msg->sysid = system_id;
-	msg->compid = component_id;
-	msg->incompat_flags = 0;
-	msg->target_sysid = 0;
-	if (signing) {
-		msg->incompat_flags |= MAVLINK_IFLAG_SIGNED;
-	}
-	if (!mavlink1) {
-		if (system_id > 255) {
-			msg->incompat_flags |= MAVLINK_IFLAG_SYSID32;
-		}
-		if (target_sysid > 255) {
-			msg->incompat_flags |= MAVLINK_IFLAG_TARGET32;
-			msg->target_sysid = target_sysid;
-		}
-	}
-	msg->compat_flags = 0;
-	msg->seq = status->current_tx_seq;
-	status->current_tx_seq = status->current_tx_seq + 1;
-
+//	bool mavlink1 = (status->flags & MAVLINK_STATUS_FLAG_OUT_MAVLINK1) != 0;
+//#ifndef MAVLINK_NO_SIGN_PACKET
+//	bool signing = 	(!mavlink1) && status->signing && (status->signing->flags & MAVLINK_SIGNING_FLAG_SIGN_OUTGOING);
+//#else
+//	bool signing = false;
+//#endif
+//	uint8_t signature_len = signing? MAVLINK_SIGNATURE_BLOCK_LEN : 0;
+//	uint8_t buf[MAVLINK_MAX_HEADER_LEN];
+//	if (mavlink1) {
+//		if (system_id > 255 || target_sysid > 255 || msg->msgid > 255) {
+//			// 32 bit IDs and extended message IDs cannot be represented in MAVLink1. Never
+//			// truncate: a masked sysid would alias another system
+//			// and a zeroed target would become a broadcast
+//			_mav_parse_error(status);
+//			return 0;
+//		}
+//		msg->magic = MAVLINK_STX_MAVLINK1;
+//	} else {
+//		msg->magic = MAVLINK_STX;
+//	}
+//	msg->len = mavlink1?min_length:_mav_trim_payload(_MAV_PAYLOAD(msg), length);
+//	msg->sysid = system_id;
+//	msg->compid = component_id;
+//	msg->incompat_flags = 0;
+//	msg->target_sysid = 0;
+//	if (signing) {
+//		msg->incompat_flags |= MAVLINK_IFLAG_SIGNED;
+//	}
+//	if (!mavlink1) {
+//		if (system_id > 255) {
+//			msg->incompat_flags |= MAVLINK_IFLAG_SYSID32;
+//		}
+//		if (target_sysid > 255) {
+//			msg->incompat_flags |= MAVLINK_IFLAG_TARGET32;
+//			msg->target_sysid = target_sysid;
+//		}
+//	}
+//	msg->compat_flags = 0;
+//	msg->seq = status->current_tx_seq;
+//	status->current_tx_seq = status->current_tx_seq + 1;
+//
 	// form the header as a byte array for the crc
-	const uint8_t header_len = mavlink_header_to_send_buffer(buf, msg);
+//	const uint8_t header_len = mavlink_header_to_send_buffer(buf, msg);
 
-	uint16_t checksum = crc_calculate(&buf[1], header_len-1);
-	crc_accumulate_buffer(&checksum, _MAV_PAYLOAD(msg), msg->len);
-	crc_accumulate(crc_extra, &checksum);
-	mavlink_ck_a(msg) = (uint8_t)(checksum & 0xFF);
-	mavlink_ck_b(msg) = (uint8_t)(checksum >> 8);
+//	uint16_t checksum = crc_calculate(&buf[1], header_len-1);
+//	crc_accumulate_buffer(&checksum, _MAV_PAYLOAD(msg), msg->len);
+//	crc_accumulate(crc_extra, &checksum);
+//	mavlink_ck_a(msg) = (uint8_t)(checksum & 0xFF);
+//	mavlink_ck_b(msg) = (uint8_t)(checksum >> 8);
 
-	msg->checksum = checksum;
+//	msg->checksum = checksum;
 
-#ifndef MAVLINK_NO_SIGN_PACKET
-	if (signing) {
-		mavlink_sign_packet(status->signing,
-				    msg->signature,
-				    (const uint8_t *)buf, header_len,
-				    (const uint8_t *)_MAV_PAYLOAD(msg), msg->len,
-				    (const uint8_t *)_MAV_PAYLOAD(msg)+(uint16_t)msg->len);
-	}
-#endif
+//#ifndef MAVLINK_NO_SIGN_PACKET
+//	if (signing) {
+//		mavlink_sign_packet(status->signing,
+//				    msg->signature,
+//				    (const uint8_t *)buf, header_len,
+//				    (const uint8_t *)_MAV_PAYLOAD(msg), msg->len,
+//				    (const uint8_t *)_MAV_PAYLOAD(msg)+(uint16_t)msg->len);
+//	}
+//#endif
 
-	return msg->len + header_len + 2 + signature_len;
+//	return msg->len + header_len + 2 + signature_len;
+    msg->incompat_flags |= MAVLINK_IFLAG_SIGNED;
+    msg->compat_flags = 0;
+    msg->seq = status->current_tx_seq++;
+    msg->sysid = (uint8_t)system_id;
+    msg->compid = component_id;
+    msg->len = length;
+
+    // 2. Build 10-Byte Header (Associated Data - AD)
+    uint8_t header[10];
+    header[0] = MAVLINK_STX;
+    header[1] = msg->len;
+    header[2] = msg->incompat_flags;
+    header[3] = msg->compat_flags;
+    header[4] = msg->seq;
+    header[5] = msg->sysid;
+    header[6] = msg->compid;
+    header[7] = (uint8_t)(msg->msgid & 0xFF);
+    header[8] = (uint8_t)((msg->msgid >> 8) & 0xFF);
+    header[9] = (uint8_t)((msg->msgid >> 16) & 0xFF);
+
+    // 3. Construct 7-Byte Replay Counter / Timestamp
+    uint8_t link_id = status->signing ? status->signing->link_id : 0;
+    uint64_t timestamp = status->signing ? status->signing->timestamp++ : 0;
+
+    uint8_t counter_stamp[7];
+    counter_stamp[0] = link_id;
+    counter_stamp[1] = (uint8_t)(timestamp & 0xFF);
+    counter_stamp[2] = (uint8_t)((timestamp >> 8) & 0xFF);
+    counter_stamp[3] = (uint8_t)((timestamp >> 16) & 0xFF);
+    counter_stamp[4] = (uint8_t)((timestamp >> 24) & 0xFF);
+    counter_stamp[5] = (uint8_t)((timestamp >> 32) & 0xFF);
+    counter_stamp[6] = (uint8_t)((timestamp >> 40) & 0xFF);
+
+    // 4. Construct 16-Byte Ascon Nonce
+    // [SEQ(1B) | SYSID(1B) | COMPID(1B) | MSGID(3B) | COUNTER_STAMP(7B) | ZERO-PAD(3B)]
+    uint8_t nonce[16] = {0};
+    nonce[0] = msg->seq;
+    nonce[1] = msg->sysid;
+    nonce[2] = msg->compid;
+    nonce[3] = header[7];
+    nonce[4] = header[8];
+    nonce[5] = header[9];
+    memcpy(&nonce[6], counter_stamp, 7);
+
+    // 5. Encrypt Payload using Ascon-128 AEAD
+    uint8_t ciphertext_and_tag[255 + 16];
+    unsigned long long clen = 0;
+
+    crypto_aead_encrypt(
+        ciphertext_and_tag, &clen,
+        _MAV_PAYLOAD_NON_CONST(msg), length,  // Plaintext payload
+        header, 10,                           // Associated Data (AD)
+        NULL,                                 // Secret nsec (unused)
+        nonce,                                // 16-byte Nonce
+        MAVLINK_ASCON_KEY                     // Shared Secret Key
+    );
+
+    // Copy encrypted payload back into buffer
+    memcpy(_MAV_PAYLOAD_NON_CONST(msg), ciphertext_and_tag, length);
+
+    // Pointer to generated 16-byte Auth Tag
+    uint8_t *ascon_tag = ciphertext_and_tag + length;
+
+    // 6. Compute MAVLink CRC-16 over Header (sans STX) + Encrypted Payload + CRC Extra
+    uint16_t checksum = crc_calculate(&header[1], 9);
+    crc_accumulate_buffer(&checksum, _MAV_PAYLOAD(msg), length);
+    crc_accumulate(crc_extra, &checksum);
+    msg->checksum = checksum;
+
+    // 7. Append 23-Byte Stamp [ Counter (7B) | Tag (16B) ] directly after Checksum
+    uint8_t *signature_target = (uint8_t *)_MAV_PAYLOAD_NON_CONST(msg) + length + 2;
+    memcpy(signature_target, counter_stamp, 7);
+    memcpy(signature_target + 7, ascon_tag, 16);
+
+    // Return total frame length: Header (10) + Payload (len) + CRC (2) + Stamp (23)
+    return 10 + length + 2 + 23;
 }
 
 MAVLINK_HELPER uint16_t mavlink_finalize_message_buffer(mavlink_message_t* msg, uint32_t system_id, uint8_t component_id,
 						      mavlink_status_t* status, uint8_t min_length, uint8_t length, uint8_t crc_extra)
 {
-	return mavlink_finalize_message_buffer_target(msg, system_id, component_id, status, min_length, length, crc_extra, 0);
+	return mavlink_finalize_message_buffer_target(msg, system_id, component_id, status, min_length, length, crc_extra, 0, 0);
 }
 
 MAVLINK_HELPER uint16_t mavlink_finalize_message_chan_target(mavlink_message_t* msg, uint32_t system_id, uint8_t component_id,
@@ -991,29 +1069,89 @@ MAVLINK_HELPER uint8_t mavlink_frame_char_buffer(mavlink_message_t* rxmsg,
 		rxmsg->signature[MAVLINK_SIGNATURE_BLOCK_LEN-status->signature_wait] = c;
 		status->signature_wait--;
 		if (status->signature_wait == 0) {
-			// we have the whole signature, check it is OK
-#ifndef MAVLINK_NO_SIGNATURE_CHECK
-			bool sig_ok = mavlink_signature_check(status->signing, status->signing_streams, rxmsg);
-#else
-			bool sig_ok = true;
-#endif
-			if (!sig_ok &&
-			   	(status->signing->accept_unsigned_callback &&
-			   	 status->signing->accept_unsigned_callback(status, rxmsg->msgid))) {
-				// accepted via application level override
-				sig_ok = true;
-			}
 			if (status->parse_state == MAVLINK_PARSE_STATE_SIGNATURE_WAIT_BAD_CRC) {
-			    status->msg_received = MAVLINK_FRAMING_BAD_CRC;
-			} else if (sig_ok) {
-			    status->msg_received = MAVLINK_FRAMING_OK;
-			} else {
-			    status->msg_received = MAVLINK_FRAMING_BAD_SIGNATURE;
-			}
-			status->parse_state = MAVLINK_PARSE_STATE_IDLE;
-			if (r_message !=NULL) {
-				memcpy(r_message, rxmsg, sizeof(mavlink_message_t));
-			}
+                    		status->msg_received = MAVLINK_FRAMING_BAD_CRC;
+                	} else {
+                    // 1. Reconstruct 10-byte Associated Data (MAVLink Header)
+                    		uint8_t header[10];
+	                        header[0] = rxmsg->magic;
+                    		header[1] = rxmsg->len;
+                    		header[2] = rxmsg->incompat_flags;
+                    header[3] = rxmsg->compat_flags;
+                    header[4] = rxmsg->seq;
+                    header[5] = rxmsg->sysid;
+                    header[6] = rxmsg->compid;
+                    header[7] = (uint8_t)(rxmsg->msgid & 0xFF);
+                    header[8] = (uint8_t)((rxmsg->msgid >> 8) & 0xFF);
+                    header[9] = (uint8_t)((rxmsg->msgid >> 16) & 0xFF);
+
+                    // 2. Reconstruct 16-byte Nonce
+                    uint8_t nonce[16] = {0};
+                    nonce[0] = rxmsg->seq;
+                    nonce[1] = rxmsg->sysid;
+                    nonce[2] = rxmsg->compid;
+                    nonce[3] = header[7];
+                    nonce[4] = header[8];
+                    nonce[5] = header[9];
+                    memcpy(&nonce[6], rxmsg->signature, 7); // 7-byte Replay Counter/Stamp
+
+                    // 3. Extract 16-byte Ascon Tag from rxmsg->signature[7..22]
+                    uint8_t *incoming_tag = &rxmsg->signature[7];
+
+                    // 4. Combine Ciphertext Payload + Tag for Ascon API
+                    uint8_t ciphertext_with_tag[255 + 16];
+                    memcpy(ciphertext_with_tag, _MAV_PAYLOAD(rxmsg), rxmsg->len);
+                    memcpy(ciphertext_with_tag + rxmsg->len, incoming_tag, 16);
+
+                    // 5. Decrypt and Authenticate Payload
+                    uint8_t plaintext[255];
+                    unsigned long long mlen = 0;
+
+                    int status_code = crypto_aead_decrypt(
+                        plaintext, &mlen,
+                        NULL,
+                        ciphertext_with_tag, rxmsg->len + 16,
+                        header, 10,
+                        nonce, MAVLINK_ASCON_KEY
+                    );
+
+                    if (status_code == 0) {
+                        // Success: Replace payload buffer with decrypted plaintext
+                        memcpy(_MAV_PAYLOAD_NON_CONST(rxmsg), plaintext, rxmsg->len);
+                        status->msg_received = MAVLINK_FRAMING_OK;
+                    } else {
+                        // Tag verification failed
+                        status->msg_received = MAVLINK_FRAMING_BAD_SIGNATURE;
+                    }
+                }
+
+                status->parse_state = MAVLINK_PARSE_STATE_IDLE;
+                	if (r_message != NULL) {
+                    		memcpy(r_message, rxmsg, sizeof(mavlink_message_t));
+                	}
+			// we have the whole signature, check it is OK
+//#ifndef MAVLINK_NO_SIGNATURE_CHECK
+//			bool sig_ok = mavlink_signature_check(status->signing, status->signing_streams, rxmsg);
+//#else
+//			bool sig_ok = true;
+//#endif
+//			if (!sig_ok &&
+//			   	(status->signing->accept_unsigned_callback &&
+//			   	 status->signing->accept_unsigned_callback(status, rxmsg->msgid))) {
+				// accepted via application level override
+//				sig_ok = true;
+//			}
+//			if (status->parse_state == MAVLINK_PARSE_STATE_SIGNATURE_WAIT_BAD_CRC) {
+//			    status->msg_received = MAVLINK_FRAMING_BAD_CRC;
+//			} else if (sig_ok) {
+//			    status->msg_received = MAVLINK_FRAMING_OK;
+//			} else {
+//			    status->msg_received = MAVLINK_FRAMING_BAD_SIGNATURE;
+//			}
+//			status->parse_state = MAVLINK_PARSE_STATE_IDLE;
+//			if (r_message !=NULL) {
+//				memcpy(r_message, rxmsg, sizeof(mavlink_message_t));
+//			}
 		}
 		break;
 	}

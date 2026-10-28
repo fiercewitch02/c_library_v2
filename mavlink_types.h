@@ -1,5 +1,15 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include "ascon/api.h"
+#include "ascon/ascon.h"
+
+#ifdef __cplusplus
+}
+#endif
+
 // Visual Studio versions before 2010 don't have stdint.h, so we just error out.
 #if (defined _MSC_VER) && (_MSC_VER < 1600)
 #error "The C-MAVLink implementation requires Visual Studio 2010 or greater"
@@ -30,7 +40,15 @@ namespace mavlink {
 #define MAVLINK_NUM_CHECKSUM_BYTES 2
 #define MAVLINK_NUM_NON_PAYLOAD_BYTES (MAVLINK_NUM_HEADER_BYTES + MAVLINK_NUM_CHECKSUM_BYTES) ///< Minimum framing length, excluding header extensions and signature; use MAVLINK_MAX_PACKET_LEN for packet buffers
 
-#define MAVLINK_SIGNATURE_BLOCK_LEN 13
+#ifdef MAVLINK_SIGNATURE_BLOCK_LEN
+#undef MAVLINK_SIGNATURE_BLOCK_LEN
+#endif
+#define MAVLINK_SIGNATURE_BLOCK_LEN 23
+
+static const uint8_t MAVLINK_ASCON_KEY[16] = {
+    0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
+    0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10
+};
 
 // Wide targets use this non-broadcast payload value; 255 is not a reserved ID.
 // Routing and relays must use the full-width header target.
